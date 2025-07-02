@@ -7,6 +7,7 @@ import time
 from bs4 import BeautifulSoup
 import pandas as pd
 import re
+import os
 
 
 #localFolder = path.expandvars(r'%LOCALAPPDATA%\Google\Chrome\User Data')
@@ -18,6 +19,10 @@ options = uc.ChromeOptions()
 driver = uc.Chrome(options=options)
 URL = "https://contratos.sistema.gov.br/transparencia/compras?modalidade_id=76&modalidade_id_text=05+-+Pregão"
 execucoes = 0
+ug_ext = 0
+
+def clear_terminal():
+    os.system('cls' if os.name == 'nt' else 'clear')
 
 def consultar_Saldos(URL=""):
     try:
@@ -113,9 +118,11 @@ def consultar_Saldos(URL=""):
                 "Número", "Tipo Item", "Descrição",
                 "Descrição detalhada", "Qtd. Total"
             ]
+
             for campo in campos_simples:
                 info[campo] = ""
 
+            info["Tipo UASG"] = ""
             info["Qtd. Autorizada"] = ""
             info["Qtd. Saldo"] = ""
             info["Número Ata"] = ""
@@ -126,7 +133,11 @@ def consultar_Saldos(URL=""):
 
             found_campos = []
 
+            unidades_participantes_inner_table_ref = None
+            
             for tr in main_table.find_all('tr', recursive=False):
+                info["UG"] = ug_ext
+
                 tds = tr.find_all('td', recursive=False)
                 if len(tds) != 2:
                     continue
@@ -138,116 +149,207 @@ def consultar_Saldos(URL=""):
                     info[chave] = valor
                     found_campos.append((chave, valor))
 
-                if chave == "Unidades Participantes":
-                    inner_table = tds[1].find('table')
-                    if inner_table:
-                        #Caso seja utilizada a busca por titulo da coluna, descomentar a linha abaixo
-                        #headers = [th.get_text(strip=True) for th in inner_table.find_all('th')]
+                #Realiza a busca e armazenamento dos dados na variavel info[]
+                if ug_ext != 999999:
+                    if chave == "Unidades Participantes":
+                        inner_table = tds[1].find('table')
+                        if inner_table:
+                            #Caso seja utilizada a busca por titulo da coluna, descomentar a linha abaixo
+                            #headers = [th.get_text(strip=True) for th in inner_table.find_all('th')]
+                            
+                            for row in inner_table.find_all('tr')[1:]:
+                                cols = [td.get_text(strip=True) for td in row.find_all('td')]
+                                if cols and cols[0].startswith(ug_ext):
+
+                                    try:
+                                        #idx_aut = headers.index("Qtd. autorizada")
+                                        #idx_saldo = headers.index("Qtd. Saldo")
+                                        #info["Qtd. Autorizada"] = cols[idx_aut]
+                                        #info["Qtd. Saldo"] = cols[idx_saldo]
+
+                                        #Alterado para buscar conforme as colunas 3 e 4 que nao mudam
+                                        #O codigo acima realiza a busca conforme o index do texto do titulo da coluna
+                                        info["Tipo UASG"] = cols[1]
+                                        info["Qtd. Autorizada"] = cols[2]
+                                        info["Qtd. Saldo"] = cols[3]
+                                        #print(f"Qtd. Autorizada: {info['Qtd. Autorizada']}, Qtd. Saldo: {info['Qtd. Saldo']}")
+                                    except ValueError:
+                                        info["Tipo UASG"] =""
+                                        info["Qtd. Autorizada"] = ""
+                                        info["Qtd. Saldo"] = ""
+                                    break
+                        else:
+                            info["Tipo UASG"] = ""
+                            info["Qtd. Autorizada"] = ""
+                            info["Qtd. Saldo"] = ""
+
+                    if chave == "Fornecedores Homologados":
+                        inner_table = tds[1].find('table')
+                        if inner_table:
+                            print("Tabela de fornecedores encontrada.")
+                            
+                            #linhas_fornecedor = inner_table.find_all('tr')[1:]
+                            #print(f"Quantidade de linhas de fornecedores encontradas: {len(linhas_fornecedor)}")
+                            #for row_f in linhas_fornecedor:
+                                #print("Dados da linha:", [td.text.strip() for td in row_f.find_all('td')])
+                        else:
+                            print("Tabela de fornecedores NÃO encontrada!")
+
+                        if inner_table:
+                            header_texts = [th.get_text(strip=True) for th in inner_table.find_all('th')]
+                            idx_fornecedor = header_texts.index("Fornecedor") if "Fornecedor" in header_texts else None
+                            idx_val_unit = header_texts.index("Vlr. Unitário") if "Vlr. Unitário" in header_texts else header_texts.index("Val. Unitário")
+                            idx_val_neg = header_texts.index("Vlr. Negociado") if "Vlr. Negociado" in header_texts else header_texts.index("Val. Negociado")
+                            count_fornecedores = 0
+                            for row_f in inner_table.find_all('tr')[1:]:
+                                cols = [td.get_text(strip=True) for td in row_f.find_all('td')]
+                                if cols and idx_fornecedor is not None:
+
+                                    info["Fornecedor"] = cols[idx_fornecedor]
+                                    info["Val_unit"] = cols[idx_val_unit]
+                                    info["Val_neg"] = cols[idx_val_neg]
+
+                                    count_fornecedores += 1
+                            if count_fornecedores == 0:
+                                print("Tabela 'Fornecedores Homologados' presente, mas nenhum fornecedor encontrado.")
+                        else:
+                            print("Nenhum fornecedor homologado neste item.")
+
+                    if chave == "Atas de Registro de Preços":
+                        inner_table = tds[1].find('table')
+                        if inner_table:
+                            header_texts = [th.get_text(strip=True) for th in inner_table.find_all('th')]
+                            idx_numero = header_texts.index("Número") if "Número" in header_texts else None
+                            idx_vigenciafim = header_texts.index("Vigência fim") if "Vigência fim" in header_texts else header_texts.index("Vigência Final")
+                            rows = inner_table.find_all('tr')
+                            for row in rows[1:]:
+                                cols = row.find_all('td')
+                                if not cols:
+                                    continue
+                                # Exemplo: supondo que "Número" está na coluna 0 e "Vigência Fim" na coluna 5
+                                numero = cols[idx_numero].get_text(strip=True)
+                                vigencia_fim = cols[idx_vigenciafim].get_text(strip=True)
+                                            
+                                info["Número Ata"] = numero
+                                info["Vigência Fim"] = vigencia_fim
+                                    #print(f"Número Ata: {info['Número Ata']}, Vigência Fim: {info['Vigência Fim']}")
+                        else:
+                            info["Número Ata"] = ""
+                            info["Vigência Fim"] = ""
+                            print("Nenhuma ata vigente neste item.")
+                else: 
+                    if chave == "Unidades Participantes":
+                        # Apenas armazena a referência para a tabela de Unidades Participantes
+                        unidades_participantes_inner_table_ref = tds[1].find('table')
+
+                    elif chave == "Fornecedores Homologados":
+                        inner_table = tds[1].find('table')
+                        if inner_table:
+                            header_texts = [th.get_text(strip=True) for th in inner_table.find_all('th')]
+                            idx_fornecedor = header_texts.index("Fornecedor") if "Fornecedor" in header_texts else None
+                            idx_val_unit = header_texts.index("Vlr. Unitário") if "Vlr. Unitário" in header_texts else (header_texts.index("Val. Unitário") if "Val. Unitário" in header_texts else None)
+                            idx_val_neg = header_texts.index("Vlr. Negociado") if "Vlr. Negociado" in header_texts else (header_texts.index("Val. Negociado") if "Val. Negociado" in header_texts else None)
+
+                            # Pega a primeira linha de dados do fornecedor, conforme o requisito de "apenas um fornecedor"
+                            data_rows = inner_table.find_all('tr')[1:] # Ignora a linha de cabeçalho
+                            if data_rows:
+                                cols_f = [td.get_text(strip=True) for td in data_rows[0].find_all('td')]
+                                if cols_f and idx_fornecedor is not None and idx_val_unit is not None and idx_val_neg is not None:
+                                    # Assegura que os índices existem antes de tentar acessá-los
+                                    if len(cols_f) > idx_fornecedor and len(cols_f) > idx_val_unit and len(cols_f) > idx_val_neg:
+                                        info["Fornecedor"] = cols_f[idx_fornecedor]
+                                        info["Val_unit"] = cols_f[idx_val_unit]
+                                        info["Val_neg"] = cols_f[idx_val_neg]
+
+                    elif chave == "Atas de Registro de Preços":
+                        inner_table = tds[1].find('table')
+                        if inner_table:
+                            header_texts_atas = [th.get_text(strip=True) for th in inner_table.find_all('th')]
+                            idx_numero_ata = header_texts_atas.index("Número") if "Número" in header_texts_atas else None
+                            idx_vigencia_fim_ata = header_texts_atas.index("Vigência fim") if "Vigência fim" in header_texts_atas else (header_texts_atas.index("Vigência Final") if "Vigência Final" in header_texts_atas else None)
+
+                            # Pega a primeira linha de dados da ata, conforme o requisito
+                            data_rows_atas = inner_table.find_all('tr')[1:] # Ignora a linha de cabeçalho
+                            if data_rows_atas:
+                                cols_ata = data_rows_atas[0].find_all('td')
+                                if cols_ata and idx_numero_ata is not None and idx_vigencia_fim_ata is not None:
+                                    # Assegura que os índices existem antes de tentar acessá-los
+                                    if len(cols_ata) > idx_numero_ata and len(cols_ata) > idx_vigencia_fim_ata:
+                                        info["Número Ata"] = cols_ata[idx_numero_ata].get_text(strip=True)
+                                        info["Vigência Fim"] = cols_ata[idx_vigencia_fim_ata].get_text(strip=True)
+                    
+
+            #Realiza a criação de cada linha a ser inserida no arquivo Excel
+            if ug_ext != 999999:
+                # Cria a linha com os dados extraídos e adiciona ao array dados
+                linha = [
+                    info["Número"],
+                    info["Tipo Item"],
+                    info["Descrição"],
+                    info["Descrição detalhada"],
+                    info["Qtd. Total"],
+                    info["UG"],
+                    info["Tipo UASG"],
+                    info["Qtd. Autorizada"],
+                    info["Qtd. Saldo"],
+                    info["Fornecedor"],
+                    info["Val_unit"],
+                    info["Val_neg"],
+                    info["Número Ata"],
+                    info["Vigência Fim"]
+                ]
+                dados.append(linha)
+
+                #print("Dados acumulados até aqui:", dados)
+                # Mostra campos simples encontrados
+                #print("Campos simples extraídos:", found_campos)
+            else:
+                if unidades_participantes_inner_table_ref:
+                    # Loop para cada linha de unidade participante, criando um registro distinto para cada
+                    for row in unidades_participantes_inner_table_ref.find_all('tr')[1:]: # Ignora a linha de cabeçalho da tabela interna
+                        cols = [td.get_text(strip=True) for td in row.find_all('td')]
                         
-                        for row in inner_table.find_all('tr')[1:]:
-                            cols = [td.get_text(strip=True) for td in row.find_all('td')]
-                            if cols and cols[0].startswith(ug_ext):
+                        # Garante que a linha tem colunas suficientes para extrair os dados
+                        if cols and len(cols) >= 4: # Verifica se há pelo menos 4 colunas (0, 1, 2, 3)
 
-                                try:
-                                    #idx_aut = headers.index("Qtd. autorizada")
-                                    #idx_saldo = headers.index("Qtd. Saldo")
-                                    #info["Qtd. Autorizada"] = cols[idx_aut]
-                                    #info["Qtd. Saldo"] = cols[idx_saldo]
+                            #ug_current_row = cols[0] # "Unidade" (Ex: "160482 - CMDO 1A BDA INF SL")
 
-                                    #Alterado para buscar conforme as colunas 3 e 4 que nao mudam
-                                    #O codigo acima realiza a busca conforme o index do texto do titulo da coluna
-                                    info["Qtd. Autorizada"] = cols[2]
-                                    info["Qtd. Saldo"] = cols[3]
-                                    #print(f"Qtd. Autorizada: {info['Qtd. Autorizada']}, Qtd. Saldo: {info['Qtd. Saldo']}")
-                                except ValueError:
-                                    info["Qtd. Autorizada"] = ""
-                                    info["Qtd. Saldo"] = ""
-                                break
-                    else:
-                        info["Qtd. Autorizada"] = ""
-                        info["Qtd. Saldo"] = ""
+                            #qtd_autorizada_current_row = cols[2] # "Qtd. autorizada"
+                            #qtd_saldo_current_row = cols[3] # "Qtd. Saldo" (assumindo que o seu HTML se alinha com isso)
 
-                if chave == "Fornecedores Homologados":
-                    inner_table = tds[1].find('table')
-                    if inner_table:
-                        print("Tabela de fornecedores encontrada.")
-                        
-                        #linhas_fornecedor = inner_table.find_all('tr')[1:]
-                        #print(f"Quantidade de linhas de fornecedores encontradas: {len(linhas_fornecedor)}")
-                        #for row_f in linhas_fornecedor:
-                            #print("Dados da linha:", [td.text.strip() for td in row_f.find_all('td')])
-                    else:
-                        print("Tabela de fornecedores NÃO encontrada!")
+                            # Cria a 'linha' usando as informações comuns (info) e as específicas da unidade
 
-                    if inner_table:
-                        header_texts = [th.get_text(strip=True) for th in inner_table.find_all('th')]
-                        idx_fornecedor = header_texts.index("Fornecedor") if "Fornecedor" in header_texts else None
-                        idx_val_unit = header_texts.index("Vlr. Unitário") if "Vlr. Unitário" in header_texts else header_texts.index("Val. Unitário")
-                        idx_val_neg = header_texts.index("Vlr. Negociado") if "Vlr. Negociado" in header_texts else header_texts.index("Val. Negociado")
-                        count_fornecedores = 0
-                        for row_f in inner_table.find_all('tr')[1:]:
-                            cols = [td.get_text(strip=True) for td in row_f.find_all('td')]
-                            if cols and idx_fornecedor is not None:
+                            info["UG"] = cols[0]
+                            info["Tipo UASG"] = cols[1]
+                            info["Qtd. Autorizada"] = cols[2]
+                            info["Qtd. Saldo"] = cols[3]
 
-                                info["Fornecedor"] = cols[idx_fornecedor]
-                                info["Val_unit"] = cols[idx_val_unit]
-                                info["Val_neg"] = cols[idx_val_neg]
+                            linha = [
+                                info["Número"],
+                                info["Tipo Item"],
+                                info["Descrição"],
+                                info["Descrição detalhada"],
+                                info["Qtd. Total"],
+                                info["UG"],
+                                info["Tipo UASG"],
+                                info["Qtd. Autorizada"],
+                                info["Qtd. Saldo"],
+                                info["Fornecedor"],
+                                info["Val_unit"],
+                                info["Val_neg"],
+                                info["Número Ata"],
+                                info["Vigência Fim"]
+                            ]
+                            dados.append(linha) # Adiciona esta linha ao array 'dados'
 
-                                count_fornecedores += 1
-                        if count_fornecedores == 0:
-                            print("Tabela 'Fornecedores Homologados' presente, mas nenhum fornecedor encontrado.")
-                    else:
-                        print("Nenhum fornecedor homologado neste item.")
-
-                if chave == "Atas de Registro de Preços":
-                    inner_table = tds[1].find('table')
-                    if inner_table:
-                        header_texts = [th.get_text(strip=True) for th in inner_table.find_all('th')]
-                        idx_numero = header_texts.index("Número") if "Número" in header_texts else None
-                        idx_vigenciafim = header_texts.index("Vigência fim") if "Vigência fim" in header_texts else header_texts.index("Vigência Final")
-                        rows = inner_table.find_all('tr')
-                        for row in rows[1:]:
-                            cols = row.find_all('td')
-                            if not cols:
-                                continue
-                            # Exemplo: supondo que "Número" está na coluna 0 e "Vigência Fim" na coluna 5
-                            numero = cols[idx_numero].get_text(strip=True)
-                            vigencia_fim = cols[idx_vigenciafim].get_text(strip=True)
-                                        
-                            info["Número Ata"] = numero
-                            info["Vigência Fim"] = vigencia_fim
-                                #print(f"Número Ata: {info['Número Ata']}, Vigência Fim: {info['Vigência Fim']}")
-                    else:
-                        info["Número Ata"] = ""
-                        info["Vigência Fim"] = ""
-                        print("Nenhuma ata vigente neste item.")
-
-            # Cria a linha com os dados extraídos e adiciona ao array dados
-            linha = [
-                info["Número"],
-                info["Tipo Item"],
-                info["Descrição"],
-                info["Descrição detalhada"],
-                info["Qtd. Total"],
-                info["Qtd. Autorizada"],
-                info["Qtd. Saldo"],
-                info["Fornecedor"],
-                info["Val_unit"],
-                info["Val_neg"],
-                info["Número Ata"],
-                info["Vigência Fim"]
-            ]
-            dados.append(linha)
-
-            #print("Dados acumulados até aqui:", dados)
-            # Mostra campos simples encontrados
-            #print("Campos simples extraídos:", found_campos)
         titulos = [
             "Número",
             "Tipo Item",
             "Descrição",
             "Descrição detalhada",
             "Qtd. Total",
+            "UG",
+            "Tipo UASG",
             "Qtd. Autorizada",
             "Qtd. Saldo",
             "Fornecedor",
@@ -279,10 +381,8 @@ def consultar_Saldos(URL=""):
 
     except Exception as e:
             print(f"[ERRO] {e}")
-    finally:
-        main()
 
-def mostrar_menu(execucoes):
+def mostrar_menu():
     RED = "\33[91m"
     PURPLE = '\033[0;35m' 
     END = "\033[0m"
@@ -301,30 +401,58 @@ def mostrar_menu(execucoes):
 [|*]=============================================================[*|]
 {PURPLE}
  Criado por: 1º Ten QUEIROZ - Adj SALC/1ª Bda Inf Sl
- Versão: v1 - 23JUN25
+ Versão: v1.0.1 - 02JUL25
 [|*]============================================================[*|]{END}
 """
+
     print(font)
-
-    if execucoes == 1:
-        global ug_ext
-        ug_ext = input("Digite a UG a serem extraídos os saldos (Ex.: 160482): ")
-
     print("\nMenu:")
     print("1. Nova Consulta")
-    print("2. Sair")
+    print("2. Alterar UG")
+    print("3. Sair")
 
+def alterar_ug():
+    RED = "\33[91m"
+    PURPLE = '\033[0;35m' 
+    END = "\033[0m"
+
+    global ug_ext
+
+    print("\nMenu UG:")
+    print("1. Extrair 1(uma) UG")
+    print("2. Extrair todas as UG")
+
+    escolhaug = input("Escolha uma opção: ")
+
+    match escolhaug:
+        case "1":
+            ug_ext = input("Digite a UG a serem extraídos os saldos (Ex.: 160482): ")
+            clear_terminal()
+            print(f"{PURPLE}UG alvo alterada - {END}Extraindo dados da UG:{RED} {ug_ext}")
+        case "2":
+            ug_ext = 999999
+            clear_terminal()
+            print(f"{PURPLE}UG alvo alterada - {END}Extraindo dados de {RED}TODAS {END}as UG participantes")
+        case _:
+            print(f"{RED}Opção inválida.")
+    
 def main():
     while True:
         global execucoes
         execucoes += 1
-        mostrar_menu(execucoes)
+        
+        if execucoes == 1:
+            alterar_ug()
+
+        mostrar_menu()
         escolha = input("Escolha uma opção: ")
 
         match escolha:
             case "1":
                 consultar_Saldos(URL)
             case "2":
+                alterar_ug()
+            case "3":
                 print("Saindo do programa.")
                 driver.quit()
                 break
