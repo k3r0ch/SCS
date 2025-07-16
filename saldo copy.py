@@ -10,14 +10,6 @@ import pandas as pd
 import re
 import os
 
-
-#localFolder = path.expandvars(r'%LOCALAPPDATA%\Google\Chrome\User Data')
-options = uc.ChromeOptions()
-# options.add_argument("--headless")
-# Caso queira usar seu perfil do Chrome:
-#options.add_argument(f'--user-data-dir={localFolder}')
-#options.add_argument(r'--profile-directory=Profile 7')
-driver = uc.Chrome(options=options)
 URL = "https://contratos.sistema.gov.br/transparencia/compras?modalidade_id=76&modalidade_id_text=05+-+Pregão"
 execucoes = 0
 ug_ext = 0
@@ -26,6 +18,14 @@ def clear_terminal():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def consultar_Saldos(URL=""):
+    #localFolder = path.expandvars(r'%LOCALAPPDATA%\Google\Chrome\User Data')
+    options = uc.ChromeOptions()
+    # options.add_argument("--headless")
+    # Caso queira usar seu perfil do Chrome:
+    #options.add_argument(f'--user-data-dir={localFolder}')
+    #options.add_argument(r'--profile-directory=Profile 7')
+    driver = uc.Chrome(options=options)
+    
     try:
         driver.get(URL)
 
