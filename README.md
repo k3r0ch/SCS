@@ -16,7 +16,15 @@ O script pode ser executado de duas formas:
 ## Changelog
 
 * xx/xx/xxxx -- vX.X.X (em breve)
+  * Tutorial de uso do sistema (Vídeo/Fotos/Texto);
+
+* 17/07/2025 -- v1.0.2
   * Coluna `UG` inserir somente números (ex.: 160482);
+  * Implementação de Interface Gráfica (GUI);
+    * Seletores, barra de progresso, execução faseada;
+  * Funcionalidade de extrair diversos pregões em uma única execução;
+  * Utilização de Perfil personalizado:
+    * Os dados de sessão são salvos, evitando a necessidade de login em todas as execuções;
 
 * 02/07/2025 -- v1.0.1
     * Adicionado menu de alteração de UG durante execução;
@@ -44,10 +52,3 @@ Telefone (61)98225-8580
 ## Licença
 
 Copyright © 2025 Felipe Martins, todos os direitos reservados.
-
-
-
-
-
-
-

@@ -9,6 +9,7 @@ __pycache__/
 # Distribution / packaging
 .Python
 build/
+chrome_profile/
 develop-eggs/
 downloads/
 eggs/
@@ -24,6 +25,8 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+teste.py
+teste copy.py
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
