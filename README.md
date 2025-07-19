@@ -5,6 +5,12 @@ O seguinte script é utilizado para a consulta de saldos de itens em licitaçõe
 
 Saliento que o script foi desenvolvido de forma amadora e proativa deste militar, com uso de IA, para sanar necessidades da carteira no dia a dia, logo não foi testado em outras máquinas para garantir a sua perfeita execução.
 
+## Memento
+
+1 - https://1a-bda-inf-sl.gitbook.io/scs/
+
+2 - https://drive.google.com/drive/folders/1Nbmwxh8XEmIRGxuKTOO57gNm5TrQ7vBK?usp=sharing
+
 ## Formas de Uso
 
 O script pode ser executado de duas formas:
@@ -17,6 +23,7 @@ O script pode ser executado de duas formas:
 
 * xx/xx/xxxx -- vX.X.X (em breve)
   * Tutorial de uso do sistema (Vídeo/Fotos/Texto);
+  * Adicionar coluna na planilha final exibindo o saldo total em R$;
 
 * 17/07/2025 -- v1.0.2
   * Coluna `UG` inserir somente números (ex.: 160482);
