@@ -634,7 +634,7 @@ class App(ctk.CTk):
             print(f"[+] Usando perfil do Chrome em: {profile_path}")
             
             # ALTERADO: Passa as opções ao criar a instância do Chrome
-            self.driver = uc.Chrome(options=options)
+            self.driver = uc.Chrome(options=options, version_main = 147)
             self.driver.set_window_size(1350,720)
             
             # !!! Lembre-se de alterar para a URL de login correta !!!
