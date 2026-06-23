@@ -7,6 +7,7 @@ from selenium.webdriver.support.ui import Select, WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from datetime import datetime
 from bs4 import BeautifulSoup
+from chrome_version import get_chrome_version
 import pandas as pd
 import re
 import os
@@ -630,11 +631,15 @@ class App(ctk.CTk):
         try:
             options = uc.ChromeOptions()
             options.add_argument(f'--user-data-dir={profile_path}')
-            
             print(f"[+] Usando perfil do Chrome em: {profile_path}")
+
+            version = get_chrome_version()
+            version = int(version.split(".")[0])
+            print(f"[+] Versão atual do Chrome: {version}")
             
             # ALTERADO: Passa as opções ao criar a instância do Chrome
-            self.driver = uc.Chrome(options=options, version_main = 147)
+            # self.driver = uc.Chrome(options=options, version_main = 147)
+            self.driver = uc.Chrome(options=options, version_main=version)
             self.driver.set_window_size(1350,720)
             
             # !!! Lembre-se de alterar para a URL de login correta !!!
