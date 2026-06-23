@@ -25,6 +25,9 @@ O script pode ser executado de duas formas:
   * Tutorial de uso do sistema (Vídeo/Fotos/Texto);
   * Adicionar coluna na planilha final exibindo o saldo total em R$;
 
+* 23/06/2026 -- v1.0.3
+  * Corrigido o erro do navegador abrir e fechar (Failsafe para utilizar a versão do Chrome do usuário)
+
 * 17/07/2025 -- v1.0.2
   * Coluna `UG` inserir somente números (ex.: 160482);
   * Implementação de Interface Gráfica (GUI);
